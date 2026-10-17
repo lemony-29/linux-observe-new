@@ -1,2 +1,2 @@
 # linux-observe-new
-Repository for COP3604 Project 1
+new repository and codebase for the COP3604 Project
