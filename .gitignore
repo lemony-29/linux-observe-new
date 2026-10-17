@@ -1,5 +1,2 @@
 # gcp external server ip
 .env
-
-# python api script
-api.py
