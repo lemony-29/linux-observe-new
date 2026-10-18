@@ -38,15 +38,16 @@ placeholder = st.empty()
 
 @st.fragment(run_every=5)
 def main():
-    st.title("Test page title")
+    st.title("Linux Observability Dashboard")
+    st.text("Test page text")
 
-    data = get_metrics()
-    df = pd.DataFrame(st.session_state.old)
-    with placeholder.empty():
-        if not df.empty():
-            return
-    if data == None:
-        return
+    # data = get_metrics()
+    # df = pd.DataFrame(st.session_state.old)
+    # with placeholder.empty():
+    #     if not df.empty():
+    #         return
+    # if data == None:
+    #     return
     
     return
 
