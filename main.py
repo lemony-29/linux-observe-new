@@ -51,6 +51,26 @@ cpu_t = st.sidebar.slider("CPU (%)", 0, 100, 80)
 mem_t = st.sidebar.slider("Memory (%)", 0, 100, 80)
 disk_t = st.sidebar.slider("Disk (%)", 0, 100, 90)
 
+# manages the stress simulation manually
+
+st.sidebar.subheader("Server Controls")
+stress_kind = st.sidebar.selectbox("Stress class", ["cpu", "vm", "io", "hdd", "sock"])
+
+if st.sidebar.button("Start stress (30 s)"):
+    try:
+        requests.post(f"{SERVER_URL}/control/stress/{stress_kind}?seconds=30", timeout=3)
+        st.toast("Beginning stress...")
+    except requests.RequestException as e:
+        st.toast(f"ERROR: {type(e).__name__}")
+
+if st.sidebar.button("Crash agent (demo restart)"):
+    try:
+        r = requests.post(f"{SERVER_URL}/control/crash", timeout=3)
+        st.toast(r.json()["status"])
+    except requests.RequestException:
+        pass
+    st.toast("systemd should restart agent.service in a few seconds")
+
 # makes the charts (the original way i did it, didn't allow me to format the time the way i wanted to)
 # i followed the docs for this: https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart
 

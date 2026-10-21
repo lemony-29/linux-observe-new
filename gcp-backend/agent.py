@@ -2,8 +2,10 @@ import json
 import threading
 import time
 import os
+import signal
+import subprocess
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
@@ -11,6 +13,18 @@ PIPE = "/run/observability/metrics_pipe"
 
 latest = {}
 latest_update = 0
+
+# stress options since i forgot to add the button
+stress_proc = None
+
+STRESS_OPTIONS = { # arguments sent (what the artificial stress should be)
+    "cpu":  ["--cpu", "0"],
+    "vm":   ["--vm", "1", "--vm-bytes", "50%"],
+    "io":   ["--io", "2"],
+    "hdd":  ["--hdd", "1", "--hdd-bytes", "256M"],
+    "sock": ["--sock", "2"],
+}
+
 
 # the default errors didn't really fit what i
 # was looking for, so i ended up making my own
@@ -52,3 +66,28 @@ def metrics():
 def agent_status():
     age = time.time() - latest_update if latest_update else None
     return {"status": "ok" if age is not None and age < 5 else "stale", "data_age_sec": age}
+
+# begin the stress process
+# this sets the stress on a given class for the provided amount of seconds, basically
+@app.post("/control/stress/{kind}")
+def start_stress(kind: str, seconds: int = 30):
+    global stress_proc
+    if kind not in STRESS_OPTIONS:
+        raise HTTPException(status_code=400, detail="unknown stress class")
+    
+    if stress_proc and stress_proc.poll() is None:
+        return {"status": "already running"}
+    
+    seconds = max(5, min(seconds, 120))
+    stress_proc = subprocess.Popen( # executes the stress-ng command
+        ["stress-ng", *STRESS_OPTIONS[kind], "--timeout", f"{seconds}s"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    return {"status": "started", "class": kind, "seconds": seconds}
+
+# kill the process
+@app.post("/control/crash")
+def crash():
+    threading.Timer(0.5, lambda: os.kill(os.getpid(), signal.SIGKILL)).start()
+
+    return {"status": "crashing in 0.5s"}
