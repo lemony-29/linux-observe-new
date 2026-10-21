@@ -54,22 +54,33 @@ disk_t = st.sidebar.slider("Disk (%)", 0, 100, 90)
 # manages the stress simulation manually
 
 st.sidebar.subheader("Server Controls")
-stress_kind = st.sidebar.selectbox("Stress class", ["cpu", "vm", "io", "hdd", "sock"])
 
-if st.sidebar.button("Start stress (30 s)"):
-    try:
-        requests.post(f"{SERVER_URL}/control/stress/{stress_kind}?seconds=30", timeout=3)
-        st.toast("Beginning stress...")
-    except requests.RequestException as e:
-        st.toast(f"ERROR: {type(e).__name__}")
+# (removed because i really don't need it)
+# stress_kind = st.sidebar.selectbox("Stress class", ["cpu", "vm", "io", "hdd", "sock"])
 
-if st.sidebar.button("Crash agent (demo restart)"):
+# if st.sidebar.button("Start stress (30 s)"):
+#     try:
+#         requests.post(f"{SERVER_URL}/control/stress/{stress_kind}?seconds=30", timeout=3)
+#         st.toast("Beginning stress...")
+#     except requests.RequestException as e:
+#         st.toast(f"ERROR: {type(e).__name__}")
+
+if st.sidebar.button("Crash Agent (auto-restart test)"):
     try:
         r = requests.post(f"{SERVER_URL}/control/crash", timeout=3)
         st.toast(r.json()["status"])
     except requests.RequestException:
         pass
     st.toast("systemd should restart agent.service in a few seconds")
+
+# a button to removes the old database with the old values 
+
+if st.sidebar.button("Delete Database"):
+    if os.path.exists(DB):
+        os.remove(DB)
+        st.toast("database has been removed")
+    else:
+        st.toast("database does not exist")
 
 # makes the charts (the original way i did it, didn't allow me to format the time the way i wanted to)
 # i followed the docs for this: https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart
@@ -125,7 +136,10 @@ def main():
 
         conn.commit()
         conn.close()
+
+        st.write("Remote Server is online")
     except (requests.RequestException, KeyError, ValueError) as e:
+        st.write("Remote Server is offline!")
         st.error("Server is either down or something broke (check below)")
         st.info(f"INFO: {e}")
 
