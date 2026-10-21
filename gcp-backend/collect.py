@@ -9,8 +9,9 @@ PIPE = "/run/observability/metrics_pipe" # directory url to the metric pipe stuf
 # makes sure the pipe directory is a thing before anything else is done
 def verify_dir():
     if not os.path.exists(PIPE):
-        os.mkfifo(PIPE, 0o606)
-
+        os.mkfifo(PIPE, 0o660)
+    os.chmod(PIPE, 0o660)
+    
 # gets all the metric info then puts it into the pipe file
 # this was headache-inducing, but i managed to get it working
 def read_metrics(prev_net, prev_time):
@@ -26,7 +27,12 @@ def read_metrics(prev_net, prev_time):
         "byte_data": net,
         "total_bytes": total,
         "delta": elapsed,
-        "rate": net_rate
+        "rate": net_rate,
+        "cpu_percent": psutil.cpu_percent(interval=1),
+        "memory_percent": psutil.virtual_memory().percent,
+        "disk_percent": psutil.disk_usage("/").percent,
+        "net_bytes_per_sec": round(net_rate, 1),
+        "load_avg_1min": psutil.getloadavg()[0],
     }
 
     return data, total, now
@@ -50,7 +56,6 @@ def main():
             except BrokenPipeError:
                 # the api might've restarted, so just do everything again
                 continue
-            return
 
 
 if __name__ == "__main__":

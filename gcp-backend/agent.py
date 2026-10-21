@@ -1,6 +1,7 @@
 import json
 import threading
 import time
+import os
 
 from fastapi import FastAPI
 
@@ -22,6 +23,9 @@ def read_pipe_data():
     # this is a loop that runs immediately after the collect.py file
     # finishes writing to the pipe
     while True:
+        if not os.path.exists(PIPE): # quick bug fix since it errored sometimes
+            os.mkfifo(PIPE, 0o660)
+
         with open(PIPE, "r") as pipe:
             for line in pipe:
                 try:

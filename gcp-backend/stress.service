@@ -1,0 +1,17 @@
+[Unit]
+Description=Periodic stress-ng load generator
+After=network.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=observer
+Group=observer
+WorkingDirectory=/tmp
+ExecStart=/opt/observability/stress.sh
+Restart=always
+RestartSec=3
+WatchdogSec=30
+
+[Install]
+WantedBy=multi-user.target

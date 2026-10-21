@@ -1,0 +1,18 @@
+[Unit]
+Description=Observability FastAPI agent
+After=network.target collect.service
+Wants=collect.service
+
+[Service]
+User=observer
+Group=observer
+RuntimeDirectory=observability
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+WorkingDirectory=/opt/observability
+ExecStart=/opt/observability/venv/bin/uvicorn agent:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

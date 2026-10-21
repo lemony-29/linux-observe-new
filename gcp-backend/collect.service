@@ -1,0 +1,16 @@
+[Unit]
+Description=Observability metrics collection
+After=network.target
+
+[Service]
+User=observer
+Group=observer
+RuntimeDirectory=observability
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+ExecStart=/opt/observability/venv/bin/python /opt/observability/collect.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

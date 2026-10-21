@@ -1,2 +1,5 @@
 # gcp external server ip
 .env
+
+# metrics db file
+metrics.db
