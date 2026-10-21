@@ -7,6 +7,7 @@ import time
 import pandas as pd
 import requests
 import streamlit as st
+import altair as alt
 
 from dotenv import load_dotenv, find_dotenv
 
@@ -19,11 +20,10 @@ SERVER_URL = os.getenv("SERVER_IP") # self-explanatory
 DB = "metrics.db" # the sql database name
 # the sql database exists to store the server info persistently
 
-# st.set_page_config(page_title="Observability Dashboard", layout="wide")
-
 st.title("Linux Infrastructure Observability Dashboard")
 
 # returns the sql database thingy
+# makes it easier to look-up and save stuff
 
 def get_sqlbase():
     conn = sqlite3.connect(DB)
@@ -32,6 +32,7 @@ def get_sqlbase():
     return conn
 
 # this manages the sidebar control stuff (uses the sql base to load info from the past)
+# the values are the amount of seconds to compare against
 
 st.sidebar.header("Historic")
 windows = {
@@ -49,6 +50,32 @@ st.sidebar.subheader("Alert thresholds")
 cpu_t = st.sidebar.slider("CPU (%)", 0, 100, 80)
 mem_t = st.sidebar.slider("Memory (%)", 0, 100, 80)
 disk_t = st.sidebar.slider("Disk (%)", 0, 100, 90)
+
+# makes the charts (the original way i did it, didn't allow me to format the time the way i wanted to)
+# i followed the docs for this: https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart
+
+def make_chart(df, column, label, usePercent=False):
+    y_scale = alt.Scale(domain=[0, 100]) if usePercent else alt.Scale(zero=True)
+
+    return (alt.Chart(df)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("time:T", title="Time",
+                    axis=alt.Axis(format="%H:%M:%S", labelAngle=-45, tickCount=6)),
+
+            y=alt.Y(f"{column}:Q", title=label, scale=y_scale),
+
+            tooltip=[alt.Tooltip("time:T", title="Time", format="%H:%M:%S"),
+                     alt.Tooltip(f"{column}:Q", title=label, format=".1f")],
+        )
+        .properties(height=350)
+    )
+
+# basically just a checker for the value stuff
+
+def check_stat(name, value, max):
+    if value > max:
+        st.error(f"High {name} usage! ({value:.1f}% > {max}%)")
 
 # the main function thats ran every 5 seconds
 
@@ -99,7 +126,9 @@ def main():
         st.info("Waiting for data...")
         return
     
-    df["Time"] = pd.to_datetime(df["ts"], unit="s") # converts the current time to something readable
+    df["time"] = (pd.to_datetime(df["ts"], unit="s", utc=True)
+        .dt.tz_convert("America/New_York")
+        .dt.tz_localize(None))
 
     latest = df.iloc[-1]
 
@@ -110,25 +139,26 @@ def main():
     c2.metric("Memory", f"{latest.mem:.1f}%")
     c3.metric("Disk", f"{latest.disk:.1f}%")
     c4.metric("Network", f"{latest.net / 1024:.1f} KB/s")
-    c5.metric("Load (1 min)", f"{latest.load:.2f}")
+    c5.metric("Load (avg 1 min)", f"{latest.load:.2f}")
 
     # show alerts based on the metric info and if it exceeds the
     # number bars
 
-    if latest.cpu > cpu_t:
-        st.error(f"High CPU usage! ({latest.cpu:.1f}% > {cpu_t}%)")
-    if latest.mem > mem_t:
-        st.error(f"High memory usage! ({latest.mem:.1f}% > {mem_t}%)")
-    if latest.disk > disk_t:
-        st.error(f"High disk usage! ({latest.disk:.1f}% > {disk_t}%)")
+    check_stat("CPU", latest.cpu, cpu_t)
+    check_stat("memory", latest.mem, mem_t)
+    check_stat("disk", latest.disk, disk_t)
 
     # load all the info into line charts
 
-    tabs = st.tabs(["CPU", "Memory", "Disk", "Network", "Load"])
+    tabs = st.tabs(["CPU", "Memory", "Disk", "Network", "Load (Processor Tasks)"])
 
-    for tab, col in zip(tabs, ["CPU Usage", "Memory Usage", "Disk Usage", "Network", "Processor Load"]):
+    charts = [("cpu", "CPU (%)", True), ("mem", "Memory (%)", True),
+              ("disk", "Disk (%)", True), ("net", "Network (bytes/s)", False),
+              ("load", "Load (avg 1 min)", False)]
+    
+    for tab, (col, label, pct) in zip(tabs, charts):
         with tab:
-            st.line_chart(df, x="Time", y=col)
+            st.altair_chart(make_chart(df, col, label, pct))
 
 if __name__ == "__main__":
     main()
