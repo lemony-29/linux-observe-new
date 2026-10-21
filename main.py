@@ -126,9 +126,11 @@ def main():
         st.info("Waiting for data...")
         return
     
-    df["time"] = (pd.to_datetime(df["ts"], unit="s", utc=True)
+    df["time"] = (
+        pd.to_datetime(df["ts"], unit="s", utc=True)
         .dt.tz_convert("America/New_York")
-        .dt.tz_localize(None))
+        .dt.tz_localize(None)
+    )
 
     df["net_kb"] = df["net"] / 1024
 
@@ -152,11 +154,20 @@ def main():
 
     # load all the info into line charts
 
-    tabs = st.tabs(["CPU", "Memory", "Disk", "Network", "Load (Processor Tasks)"])
+    tabs = st.tabs([
+        "CPU", 
+        "Memory", 
+        "Disk", 
+        "Network", 
+        "Load (Processor Tasks)"
+    ])
 
-    charts = [("cpu", "CPU (%)", True), ("mem", "Memory (%)", True),
-              ("disk", "Disk (%)", True), ("net_kb", "Network (bytes/s)", False),
-              ("load", "Load (avg 1 min)", False)]
+    charts = [
+        ("cpu", "CPU (%)", True), 
+        ("mem", "Memory (%)", True),
+        ("disk", "Disk (%)", True), ("net_kb", "Network (bytes/s)", False),
+        ("load", "Load (avg 1 min)", False)
+    ]
     
     for tab, (col, label, pct) in zip(tabs, charts):
         with tab:
