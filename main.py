@@ -16,6 +16,7 @@ from dotenv import load_dotenv, find_dotenv
 env_path = find_dotenv()
 load_dotenv(env_path, override=True) # this removes the cache (since i ran into an issue where the cache was preventing the network request)
 
+SERVER_IS_CONNECTED = False
 SERVER_URL = os.getenv("SERVER_IP") # self-explanatory
 DB = "metrics.db" # the sql database name
 # the sql database exists to store the server info persistently
@@ -56,14 +57,14 @@ disk_t = st.sidebar.slider("Disk (%)", 0, 100, 90)
 st.sidebar.subheader("Server Controls")
 
 # (removed because i really don't need it)
-# stress_kind = st.sidebar.selectbox("Stress class", ["cpu", "vm", "io", "hdd", "sock"])
+stress_kind = st.sidebar.selectbox("Stress class", ["cpu", "vm", "io", "hdd", "sock"])
 
-# if st.sidebar.button("Start stress (30 s)"):
-#     try:
-#         requests.post(f"{SERVER_URL}/control/stress/{stress_kind}?seconds=30", timeout=3)
-#         st.toast("Beginning stress...")
-#     except requests.RequestException as e:
-#         st.toast(f"ERROR: {type(e).__name__}")
+if st.sidebar.button("Stress"):
+    try:
+        requests.post(f"{SERVER_URL}/control/stress/{stress_kind}?seconds=30", timeout=3)
+        st.toast("Beginning stress...")
+    except requests.RequestException as e:
+        st.toast(f"ERROR: {type(e).__name__}")
 
 if st.sidebar.button("Crash Agent (auto-restart test)"):
     try:
@@ -81,6 +82,13 @@ if st.sidebar.button("Delete Database"):
         st.toast("database has been removed")
     else:
         st.toast("database does not exist")
+
+# colors the python text a certain way
+# basically, this just helps visualize certain things
+
+def text_color(text: str, color: str):
+    color = color.lower()
+    return f":{color}[{text}]"
 
 # makes the charts (the original way i did it, didn't allow me to format the time the way i wanted to)
 # i followed the docs for this: https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart
@@ -137,11 +145,16 @@ def main():
         conn.commit()
         conn.close()
 
-        st.write("Remote Server is online")
+        st.write(f"{text_color("Connected", "green")} to Remote Server!")
+        SERVER_IS_CONNECTED = True
     except (requests.RequestException, KeyError, ValueError) as e:
-        st.write("Remote Server is offline!")
-        st.error("Server is either down or something broke (check below)")
-        st.info(f"INFO: {e}")
+        SERVER_IS_CONNECTED = False
+        st.write(f"{text_color("Disconnected", "red")} from Remote Server!")
+
+        if isinstance(e, requests.exceptions.ConnectTimeout) or isinstance(e, requests.ConnectionError):
+            st.error("Server is likely down or IP is not allowed")
+
+        # st.info(f"INFO: {e}")
 
     # gets the data from whatever is chosen from the sidebar
 
@@ -157,7 +170,7 @@ def main():
     # nothing has been returned yet
 
     if df.empty:
-        st.info("Waiting for data...")
+        st.info("Waiting for data..." if SERVER_IS_CONNECTED else "Server Not Connected...")
         return
     
     df["time"] = (
@@ -199,7 +212,8 @@ def main():
     charts = [
         ("cpu", "CPU (%)", True), 
         ("mem", "Memory (%)", True),
-        ("disk", "Disk (%)", True), ("net_kb", "Network (bytes/s)", False),
+        ("disk", "Disk (%)", True), 
+        ("net_kb", "Network (kb/s)", False),
         ("load", "Load (avg 1 min)", False)
     ]
     

@@ -18,16 +18,16 @@ while true; do
     stress-ng "${args[@]}" --timeout "${duration}s" &
     pid=$!
 
-    while kill -0 "$pid" 2>/dev/null; do
-      systemd-notify WATCHDOG=1
+    while kill -0 "$pid" 2>/dev/null; do            # runs while the process with the id exists
+      systemd-notify WATCHDOG=1                     # says the script is still active (i.e. it didn't crash)
       sleep 5
     done
 
-    wait "$pid"
+    wait "$pid"                                     # wait for the process to finish
     echo "END $class"
 
     for _ in 1 2 3 4 5 6; do
-      systemd-notify WATCHDOG=1
+      systemd-notify WATCHDOG=1                     # send a heartbeat and sleep for 5 seconds, 6 times
       sleep 5
     done
   done
