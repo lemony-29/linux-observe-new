@@ -56,8 +56,9 @@ disk_t = st.sidebar.slider("Disk (%)", 0, 100, 90)
 
 st.sidebar.subheader("Server Controls")
 
-# (removed because i really don't need it)
 stress_kind = st.sidebar.selectbox("Stress class", ["cpu", "vm", "io", "hdd", "sock"])
+
+# simulates stress for the given dropdown item
 
 if st.sidebar.button("Stress"):
     try:
@@ -65,6 +66,8 @@ if st.sidebar.button("Stress"):
         st.toast("Beginning stress...")
     except requests.RequestException as e:
         st.toast(f"ERROR: {type(e).__name__}")
+
+# crashes the agent service (to demonstrate auto restart)
 
 if st.sidebar.button("Crash Agent (auto-restart test)"):
     try:
