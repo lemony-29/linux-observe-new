@@ -70,6 +70,7 @@ if st.sidebar.button("Stress"):
 # crashes the agent service (to demonstrate auto restart)
 
 if st.sidebar.button("Crash Agent (auto-restart test)"):
+    SERVER_IS_CONNECTED = False
     try:
         r = requests.post(f"{SERVER_URL}/control/crash", timeout=3)
         st.toast(r.json()["status"])
