@@ -63,7 +63,7 @@ stress_kind = st.sidebar.selectbox("Stress class", ["cpu", "vm", "io", "hdd", "s
 if st.sidebar.button("Stress"):
     try:
         requests.post(f"{SERVER_URL}/control/stress/{stress_kind}?seconds=30", timeout=3)
-        st.toast("Beginning stress...")
+        st.toast("Beginning stress... (testing)")
     except requests.RequestException as e:
         st.toast(f"ERROR: {type(e).__name__}")
 
